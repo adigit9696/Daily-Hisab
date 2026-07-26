@@ -1,6 +1,7 @@
 import { db } from './firebase';
 import {
   doc, setDoc, getDoc, collection, query, where, getDocs, writeBatch,
+  onSnapshot,
 } from 'firebase/firestore';
 
 /* ------------------------------------------------------------------ */
@@ -23,6 +24,13 @@ function queuePending(key, value, onBadgeUpdate) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Shared shop path — ALL devices use the SAME Firestore location     */
+/* ------------------------------------------------------------------ */
+const SHOP_ID = 'sarita_pharmacy';
+const shopDoc = (path) => doc(db, 'shops', SHOP_ID, 'data', path);
+const daysDoc = (date) => doc(db, 'shops', SHOP_ID, 'days', date);
+
+/* ------------------------------------------------------------------ */
 /*  Sync badge state                                                   */
 /* ------------------------------------------------------------------ */
 export function getSyncState() {
@@ -43,23 +51,25 @@ function chunkArr(arr, size) {
 
 async function firestoreWrite(key, value) {
   if (key === 'pin') {
-    await setDoc(doc(db, 'meta', 'app'), { pin: value }, { merge: true });
+    await setDoc(shopDoc('meta'), { pin: value }, { merge: true });
   } else if (key === 'settings') {
-    await setDoc(doc(db, 'meta', 'app'), { settings: JSON.parse(value) }, { merge: true });
+    await setDoc(shopDoc('meta'), { settings: JSON.parse(value) }, { merge: true });
+  } else if (key === 'customers') {
+    await setDoc(shopDoc('customers'), { list: JSON.parse(value) }, { merge: false });
   } else if (key === 'history') {
     const arr = JSON.parse(value);
     for (const group of chunkArr(arr, 450)) {
       const batch = writeBatch(db);
       group.forEach((entry) => {
         if (!entry?.date) return;
-        batch.set(doc(db, 'days', entry.date), entry, { merge: true });
+        batch.set(daysDoc(entry.date), entry, { merge: true });
       });
       await batch.commit();
     }
   } else if (key.startsWith('day:')) {
     const date = key.slice(4);
     const obj  = JSON.parse(value);
-    await setDoc(doc(db, 'days', date), obj, { merge: true });
+    await setDoc(daysDoc(date), obj, { merge: true });
   } else {
     throw new Error('unknown storage key: ' + key);
   }
@@ -89,25 +99,62 @@ export async function flushPending(onBadgeUpdate, onToast) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Public storage API — same interface as reference                   */
+/*  Realtime listeners — multi-device sync                             */
+/* ------------------------------------------------------------------ */
+export function listenToDay(dateKey, onUpdate) {
+  return onSnapshot(daysDoc(dateKey), (snap) => {
+    if (snap.exists()) {
+      lsSet('day:' + dateKey, JSON.stringify(snap.data()));
+      onUpdate(snap.data());
+    }
+  }, (err) => console.error('day listener error', err));
+}
+
+export function listenToCustomers(onUpdate) {
+  return onSnapshot(shopDoc('customers'), (snap) => {
+    if (snap.exists()) {
+      const list = snap.data().list || [];
+      try { localStorage.setItem('sarita_customers', JSON.stringify(list)); } catch {}
+      lsSet('customers', JSON.stringify(list));
+      onUpdate(list);
+    }
+  }, (err) => console.error('customers listener error', err));
+}
+
+export function listenToMeta(onUpdate) {
+  return onSnapshot(shopDoc('meta'), (snap) => {
+    if (snap.exists()) {
+      onUpdate(snap.data());
+    }
+  }, (err) => console.error('meta listener error', err));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Public storage API                                                 */
 /* ------------------------------------------------------------------ */
 const storage = {
   async get(key) {
     try {
       if (key === 'pin') {
-        const snap = await getDoc(doc(db, 'meta', 'app'));
+        const snap = await getDoc(shopDoc('meta'));
         const v = snap.exists() ? snap.data().pin : null;
         if (v) lsSet('pin', v);
         return v ? { key, value: v } : null;
       }
       if (key === 'settings') {
-        const snap = await getDoc(doc(db, 'meta', 'app'));
+        const snap = await getDoc(shopDoc('meta'));
         const v = snap.exists() ? snap.data().settings : null;
         if (v) lsSet('settings', JSON.stringify(v));
         return v ? { key, value: JSON.stringify(v) } : null;
       }
+      if (key === 'customers') {
+        const snap = await getDoc(shopDoc('customers'));
+        const list = snap.exists() ? (snap.data().list || []) : [];
+        lsSet('customers', JSON.stringify(list));
+        return { key, value: JSON.stringify(list) };
+      }
       if (key === 'history') {
-        const q2 = query(collection(db, 'days'), where('closed', '==', true));
+        const q2 = query(collection(db, 'shops', SHOP_ID, 'days'), where('closed', '==', true));
         const snap = await getDocs(q2);
         const arr = snap.docs.map((d) => d.data());
         arr.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -116,7 +163,7 @@ const storage = {
       }
       if (key.startsWith('day:')) {
         const date = key.slice(4);
-        const snap = await getDoc(doc(db, 'days', date));
+        const snap = await getDoc(daysDoc(date));
         if (snap.exists()) lsSet(key, JSON.stringify(snap.data()));
         return snap.exists() ? { key, value: JSON.stringify(snap.data()) } : null;
       }

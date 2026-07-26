@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useRef, useCallback, useEffect } from 'react';
-import storage, { getSyncState, flushPending } from '../services/storage';
+import storage, { getSyncState, flushPending, listenToDay, listenToCustomers } from '../services/storage';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -11,9 +11,23 @@ export const MONTHS = ['January','February','March','April','May','June','July',
 /** Sequential entry flow for Next/Prev navigation */
 export const ENTRY_FLOW = ['cash', 'digital', 'credit', 'expense', 'clinical', 'target', 'summary'];
 
+/** Clinical fixed rates */
+export const CLINICAL_RATES = {
+  'BP Checkup':    10,
+  'Dressing':      50,
+  'ECG':          300,
+  'Nebulization':  40,
+  'RBS Test':      40,
+  'Other':          0,
+};
+export const CLINICAL_TYPES = Object.keys(CLINICAL_RATES);
+
 export const todayKey = () => new Date().toISOString().slice(0, 10);
 
-export const fmt = (n) => '₹' + (Math.round((n || 0) * 100) / 100).toLocaleString('en-IN');
+/* ── Strict financial rounding (eliminates JS floating-point errors) ── */
+const r2 = (n) => Math.round(((n || 0) + Number.EPSILON) * 100) / 100;
+
+export const fmt = (n) => '₹' + r2(n).toLocaleString('en-IN');
 
 export const dateLbl = (s) => {
   const d = new Date((s || todayKey()) + 'T00:00:00');
@@ -35,16 +49,16 @@ export const emptyDay = (date) => ({
 });
 
 /* ------------------------------------------------------------------ */
-/*  Totals (pure functions on a day object)                            */
+/*  Totals — strict r2() rounding on every calculation                 */
 /* ------------------------------------------------------------------ */
-export const cashT       = (d) => NOTES.reduce((s, n) => s + n * (+d.notes?.[n] || 0), 0) + COINS.reduce((s, c) => s + c * (+d.coins?.[c] || 0), 0);
-export const digitalT    = (d) => (+d.paytm || 0) + (+d.pos || 0);
-export const creditT     = (d) => (d.credits || []).filter((c) => !c.paid).reduce((s, c) => s + (+c.amount || 0), 0);
-export const expenseT    = (d) => (d.expenses || []).reduce((s, e) => s + (+e.amount || 0), 0);
-export const clinicalT   = (d) => (d.clinicals || []).reduce((s, c) => s + (+c.amount || 0), 0);
-export const collectionT = (d) => cashT(d) + digitalT(d) + creditT(d) + clinicalT(d);
-export const netT        = (d) => collectionT(d) + expenseT(d);
-export const diffV       = (d) => netT(d) - (+d.expected || 0);
+export const cashT       = (d) => r2(NOTES.reduce((s, n) => s + n * (+d.notes?.[n] || 0), 0) + COINS.reduce((s, c) => s + c * (+d.coins?.[c] || 0), 0));
+export const digitalT    = (d) => r2((+d.paytm || 0) + (+d.pos || 0));
+export const creditT     = (d) => r2((d.credits || []).filter((c) => !c.paid).reduce((s, c) => s + (+c.amount || 0), 0));
+export const expenseT    = (d) => r2((d.expenses || []).reduce((s, e) => s + (+e.amount || 0), 0));
+export const clinicalT   = (d) => r2((d.clinicals || []).reduce((s, c) => s + (+c.amount || 0), 0));
+export const collectionT = (d) => r2(cashT(d) + digitalT(d) + creditT(d) + clinicalT(d));
+export const netT        = (d) => r2(collectionT(d) + expenseT(d));
+export const diffV       = (d) => r2(netT(d) - (+d.expected || 0));
 
 export function dayTotals(h) {
   const cash    = cashT(h);
@@ -52,8 +66,8 @@ export function dayTotals(h) {
   const expense = expenseT(h);
   const clinical= clinicalT(h);
   const digital = digitalT(h);
-  const net     = cash + digital + credit + clinical + expense;
-  return { cash, credit, expense, clinical, digital, net, diff: net - (+h.expected || 0) };
+  const net     = r2(cash + digital + credit + clinical + expense);
+  return { cash, credit, expense, clinical, digital, net, diff: r2(net - (+h.expected || 0)) };
 }
 
 /* ------------------------------------------------------------------ */
@@ -87,7 +101,6 @@ const initialState = {
   monthCursor: new Date(),
   reportMode: 'monthly',
   authFailed: false,
-  // Udhaar Khata — hydrated INSTANTLY from localStorage
   customers: loadCustomersSync(),
   selectedCustomerId: null,
 };
@@ -134,7 +147,6 @@ function reducer(state, action) {
       return { ...state, authFailed: action.failed };
     case 'LOAD_ALL':
       return { ...state, ...action.payload };
-    // Udhaar Khata
     case 'SET_CUSTOMERS':
       return { ...state, customers: action.customers };
     case 'SET_SELECTED_CUSTOMER':
@@ -155,6 +167,8 @@ export function AppProvider({ children }) {
   const lockTimerRef = useRef(null);
   const toastTimerRef = useRef(null);
   const customerSaveRef = useRef(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const isToday = useCallback(() => {
     return state.viewDate === todayKey() || state.viewDate === state.editingReopened;
@@ -177,13 +191,13 @@ export function AppProvider({ children }) {
     if (!state.autoLock) return;
     clearTimeout(lockTimerRef.current);
     lockTimerRef.current = setTimeout(() => {
-      const cur = state.page;
+      const cur = stateRef.current.page;
       if (cur !== 'lock' && cur !== 'splash') {
         dispatch({ type: 'SET_PAGE', page: 'lock' });
         dispatch({ type: 'SET_PIN_TARGET', target: null });
       }
     }, 3 * 60 * 1000);
-  }, [state.autoLock, state.page]);
+  }, [state.autoLock]);
 
   useEffect(() => {
     const handler = () => resetLock();
@@ -195,17 +209,45 @@ export function AppProvider({ children }) {
     };
   }, [resetLock]);
 
+  /* --- Scroll to top on every page change (Fix #6) --------------- */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [state.page]);
+
+  /* --- Mobile hardware back button (Fix #2) ---------------------- */
+  useEffect(() => {
+    // Push a dummy state so popstate fires instead of closing tab
+    const pushDummyState = () => {
+      window.history.pushState({ page: stateRef.current.page }, '');
+    };
+
+    const handlePopState = (e) => {
+      const cur = stateRef.current.page;
+      const noBack = ['splash', 'lock', 'home'];
+      if (noBack.includes(cur)) {
+        // Prevent browser from going back / closing
+        pushDummyState();
+        return;
+      }
+      dispatch({ type: 'GO_BACK' });
+      pushDummyState();
+    };
+
+    // Initial dummy state push
+    pushDummyState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   /* --- Backspace / Escape keyboard navigation -------------------- */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't intercept if user is typing in an input field
       const tag = document.activeElement?.tagName;
       const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
       if (isEditable) return;
 
-      // Don't navigate back from splash, lock, or home
       const noBack = ['splash', 'lock', 'home'];
-      if (noBack.includes(state.page)) return;
+      if (noBack.includes(stateRef.current.page)) return;
 
       if (e.key === 'Backspace' || e.key === 'Escape') {
         e.preventDefault();
@@ -214,7 +256,28 @@ export function AppProvider({ children }) {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [state.page]);
+  }, []);
+
+  /* --- Realtime listeners (Fix #1 & #3) -------------------------- */
+  useEffect(() => {
+    // Listen for realtime day updates from any device
+    const dayKey = state.viewDate || todayKey();
+    const unsubDay = listenToDay(dayKey, (data) => {
+      // Only merge if we're on the same date — don't overwrite current edits mid-type
+      if (stateRef.current.viewDate === dayKey) {
+        dispatch({ type: 'SET_DAY', day: { ...emptyDay(dayKey), ...data } });
+      }
+    });
+
+    return () => unsubDay();
+  }, [state.viewDate]);
+
+  useEffect(() => {
+    const unsubCustomers = listenToCustomers((list) => {
+      dispatch({ type: 'SET_CUSTOMERS', customers: list });
+    });
+    return () => unsubCustomers();
+  }, []);
 
   /* --- debounced save -------------------------------------------- */
   const saveDay = useCallback(() => {
@@ -229,10 +292,7 @@ export function AppProvider({ children }) {
 
   /* --- customer save: SYNCHRONOUS localStorage + async Firestore - */
   const saveCustomers = useCallback((customers) => {
-    // ① Synchronous localStorage write — survives refresh instantly
-    try { localStorage.setItem('sarita_customers', JSON.stringify(customers)); } catch { /* full */ }
-
-    // ② Debounced async Firestore backup
+    try { localStorage.setItem('sarita_customers', JSON.stringify(customers)); } catch {}
     clearTimeout(customerSaveRef.current);
     customerSaveRef.current = setTimeout(async () => {
       try {

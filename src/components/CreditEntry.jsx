@@ -97,9 +97,9 @@ export default function CreditEntry() {
         {!readonly && (
           <div className="glass rounded-2xl p-5 mb-4 flex flex-col gap-3 animate-card-in">
             <input type="text" placeholder="Party ka naam" value={name} onChange={(e) => setName(e.target.value)} className={inputCls + ' !flex-none w-full'} />
-            <div className="flex gap-2.5">
-              <input type="number" placeholder="Amount" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls + ' font-mono'} />
-              <div className="flex items-center gap-1.5 flex-1 border border-line rounded-xl px-3.5 py-2.5 bg-bg-input focus-within:border-accent/40 transition-colors">
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <input type="number" placeholder="Amount" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls + ' font-mono min-w-0 w-full'} />
+              <div className="flex items-center gap-1.5 border border-line rounded-xl px-3.5 py-2.5 bg-bg-input focus-within:border-accent/40 transition-colors min-w-0 w-full">
                 <Phone size={14} className="text-softer shrink-0" />
                 <input type="tel" placeholder="WhatsApp No." maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                   className="border-none bg-transparent outline-none text-[14px] font-mono flex-1 min-w-0 text-ink placeholder:text-softer" />
