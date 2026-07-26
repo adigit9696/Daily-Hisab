@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Dark Futuristic Palette ─── */
+  --color-bg-primary: #0B1D1E;
+  --color-bg-secondary: #0F2A2C;
+  --color-bg-card: rgba(255, 255, 255, 0.04);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.07);
+  --color-bg-glass: rgba(255, 255, 255, 0.06);
+  --color-bg-input: rgba(255, 255, 255, 0.05);
+
+  --color-teal: #0F3D3E;
+  --color-teal-2: #155350;
+  --color-teal-3: #1F6F69;
+  --color-accent: #34D399;
+  --color-accent-dim: rgba(52, 211, 153, 0.15);
+  --color-accent-glow: rgba(52, 211, 153, 0.25);
+  --color-neon: #5EEAD4;
+
+  --color-cream: #FAF8F3;
+  --color-paper: #FFFFFF;
+  --color-ink: #E8EDEC;
+  --color-soft: #8FA3A0;
+  --color-softer: #5B7573;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.14);
+
+  --color-amber: #F59E0B;
+  --color-amber-light: rgba(245, 158, 11, 0.12);
+  --color-red: #EF4444;
+  --color-red-light: rgba(239, 68, 68, 0.12);
+  --color-green: #34D399;
+  --color-green-light: rgba(52, 211, 153, 0.12);
+  --color-credit: #C084FC;
+  --color-credit-light: rgba(192, 132, 252, 0.12);
+  --color-clinical: #60A5FA;
+  --color-clinical-light: rgba(96, 165, 250, 0.12);
+  --color-expense: #FB923C;
+  --color-expense-light: rgba(251, 146, 60, 0.12);
+  --color-monthly: #A78BFA;
+  --color-monthly-light: rgba(167, 139, 250, 0.12);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-serif: 'Fraunces', Georgia, serif;
+
+  /* Border radius */
+  --radius-card: 16px;
+  --radius-btn: 12px;
+
+  /* Animations */
+  --animate-ring-pulse: ring-pulse 2.2s ease-out infinite;
+  --animate-cross-breathe: cross-breathe 2.4s ease-in-out infinite;
+  --animate-ecg-draw: ecg-draw 1.9s ease-in-out infinite;
+  --animate-shake: shake 0.4s ease;
+  --animate-card-in: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-sheet-up: sheet-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-pulse-dot: pulse-dot 1.5s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-glow: glow-pulse 2s ease-in-out infinite;
+
+  @keyframes ring-pulse {
+    0%   { transform: scale(0.7); opacity: 0; }
+    25%  { opacity: 0.6; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes cross-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+  }
+  @keyframes ecg-draw {
+    0%   { stroke-dashoffset: 340; }
+    55%  { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -340; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.15); }
+    50%      { box-shadow: 0 0 35px rgba(52, 211, 153, 0.3); }
+  }
+}
+
+/* ─── Global Resets ─── */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
+html { height: 100dvh; background: var(--color-bg-primary); }
+body { min-height: 100dvh; margin: 0; background: var(--color-bg-primary); color: var(--color-ink); }
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* ─── Number inputs ─── */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* ─── Glass Card Utility (GPU-accelerated for 60FPS) ─── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* ─── Glow accents ─── */
+.glow-accent { box-shadow: 0 0 20px rgba(52, 211, 153, 0.15), 0 4px 30px rgba(0, 0, 0, 0.3); }
+.glow-accent-strong { box-shadow: 0 0 30px rgba(52, 211, 153, 0.25), 0 4px 30px rgba(0, 0, 0, 0.4); }
+
+/* ─── Smooth Transitions (GPU-composited) ─── */
+.transition-gpu { transition-property: transform, opacity, background-color, border-color, box-shadow; transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); transition-duration: 200ms; will-change: transform, opacity; }
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; will-change: transform; }
+.hover-lift:hover { transform: translateY(-2px) translateZ(0); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.hover-lift:active { transform: translateY(0) scale(0.98) translateZ(0); }
+
+/* ─── Gradient mesh background ─── */
+.bg-mesh {
+  background: 
+    radial-gradient(ellipse at 20% 0%, rgba(52, 211, 153, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(96, 165, 250, 0.06) 0%, transparent 50%),
+    var(--color-bg-primary);
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* ─── Print ─── */
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: fixed; top: 0; left: 0; width: 100%; padding: 28px; background: #fff; color: #000; }
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="32" fill="#0F3D3E"/>
+  <path d="M80 36h32v48h48v32h-48v48h-32v-48h-48v-32h48z" fill="#FAF8F3"/>
+  <text x="96" y="175" text-anchor="middle" font-family="Georgia,serif" font-size="18" font-weight="bold" fill="rgba(250,248,243,0.7)">HISAB</text>
+</svg>
