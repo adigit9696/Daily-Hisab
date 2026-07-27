@@ -110,8 +110,8 @@
 
 /* ─── Global Resets ─── */
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; }
-html { height: 100dvh; background: var(--color-bg-primary); }
-body { min-height: 100dvh; margin: 0; background: var(--color-bg-primary); color: var(--color-ink); }
+html { height: 100dvh; background: var(--color-bg-primary); scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+body { min-height: 100dvh; margin: 0; background: var(--color-bg-primary); color: var(--color-ink); overscroll-behavior: none; }
 #root { min-height: 100dvh; display: flex; flex-direction: column; }
 
 /* ─── Number inputs ─── */

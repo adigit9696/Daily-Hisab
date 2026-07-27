@@ -1,22 +1,35 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useApp, fmt, shortDate, todayKey } from '../context/AppContext';
-import { ChevronLeft, Home, MessageCircle, Trash2, ArrowDownLeft, ArrowUpRight, Phone, Edit3 } from 'lucide-react';
+import { ChevronLeft, Home, MessageCircle, Trash2, ArrowDownLeft, ArrowUpRight, Phone, Edit3, X, Save, AlertTriangle, Lock } from 'lucide-react';
+
+/* PIN keypad keys */
+const PIN_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 export default function UdhaarDetail() {
   const { state, dispatch, saveCustomers, toast } = useApp();
-  const { customers, selectedCustomerId } = state;
+  const { customers, selectedCustomerId, pin } = state;
   const scrollRef = useRef(null);
 
   const customer = useMemo(() => customers.find((c) => c.id === selectedCustomerId), [customers, selectedCustomerId]);
 
   const [showTxnForm, setShowTxnForm] = useState(false);
-  const [txnType, setTxnType]         = useState('given');
-  const [txnAmount, setTxnAmount]     = useState('');
-  const [txnNote, setTxnNote]         = useState('');
+  const [txnType, setTxnType] = useState('given');
+  const [txnAmount, setTxnAmount] = useState('');
+  const [txnNote, setTxnNote] = useState('');
+
+  /* Profile Edit Modal */
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editPhone, setEditPhone] = useState('');
+
+  /* Delete flow states */
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   const balance = useMemo(() => {
     if (!customer) return 0;
-    const given    = (customer.transactions || []).filter((t) => t.type === 'given').reduce((s, t) => s + (+t.amount || 0), 0);
+    const given = (customer.transactions || []).filter((t) => t.type === 'given').reduce((s, t) => s + (+t.amount || 0), 0);
     const received = (customer.transactions || []).filter((t) => t.type === 'received').reduce((s, t) => s + (+t.amount || 0), 0);
     return given - received;
   }, [customer]);
@@ -50,6 +63,86 @@ export default function UdhaarDetail() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [grouped.length]);
+
+  /* Open profile modal */
+  const openProfile = useCallback(() => {
+    if (!customer) return;
+    setEditPhone(customer.phone || '');
+    setShowProfileModal(true);
+  }, [customer]);
+
+  /* Save phone number */
+  const savePhone = useCallback(() => {
+    if (!customer) return;
+    const updated = customers.map((c) =>
+      c.id === selectedCustomerId
+        ? { ...c, phone: editPhone.trim() }
+        : c
+    );
+    dispatch({ type: 'SET_CUSTOMERS', customers: updated });
+    saveCustomers(updated);
+    setShowProfileModal(false);
+    toast('WhatsApp number update ho gaya ✓');
+  }, [editPhone, customer, customers, selectedCustomerId, dispatch, saveCustomers, toast]);
+
+  /* Delete Account — Step 1: Confirmation */
+  const handleDeleteRequest = useCallback(() => {
+    setShowProfileModal(false);
+    setShowDeleteConfirm(true);
+  }, []);
+
+  /* Delete Account — Step 2: Show PIN modal */
+  const handleDeleteConfirmOK = useCallback(() => {
+    setShowDeleteConfirm(false);
+    setPinInput('');
+    setPinError('');
+    setShowPinModal(true);
+  }, []);
+
+  /* PIN keypad handler */
+  const handlePinKey = useCallback((key) => {
+    if (key === '⌫') {
+      setPinInput((prev) => prev.slice(0, -1));
+      setPinError('');
+    } else if (key === '') {
+      return; /* empty spacer */
+    } else {
+      setPinInput((prev) => {
+        if (prev.length >= 6) return prev;
+        return prev + key;
+      });
+      setPinError('');
+    }
+  }, []);
+
+  /* Delete Account — Step 3: Validate PIN and delete */
+  const handlePinSubmit = useCallback(() => {
+    if (pinInput !== pin) {
+      setPinError('Galat PIN — dobara try karein');
+      setPinInput('');
+      return;
+    }
+    /* PIN correct — permanently delete customer */
+    const updated = customers.filter((c) => c.id !== selectedCustomerId);
+    dispatch({ type: 'SET_CUSTOMERS', customers: updated });
+    saveCustomers(updated);
+    setShowPinModal(false);
+    dispatch({ type: 'GO_BACK' });
+    toast(`${customer?.name || 'Customer'} ka account delete ho gaya ✓`);
+  }, [pinInput, pin, customers, selectedCustomerId, customer, dispatch, saveCustomers, toast]);
+
+  /* Keyboard support for PIN modal */
+  useEffect(() => {
+    if (!showPinModal) return;
+    const handler = (e) => {
+      if (e.key >= '0' && e.key <= '9') { handlePinKey(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { handlePinKey('⌫'); e.preventDefault(); }
+      else if (e.key === 'Enter') { handlePinSubmit(); e.preventDefault(); }
+      else if (e.key === 'Escape') { setShowPinModal(false); setPinInput(''); setPinError(''); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showPinModal, handlePinKey, handlePinSubmit]);
 
   /* Add transaction */
   const addTransaction = useCallback(() => {
@@ -87,17 +180,6 @@ export default function UdhaarDetail() {
     saveCustomers(updated);
     toast('Transaction delete ho gaya');
   }, [customers, selectedCustomerId, dispatch, saveCustomers, toast]);
-
-  /* Delete customer (only if settled) */
-  const deleteCustomer = useCallback(() => {
-    if (balance !== 0) { toast('Pehle outstanding clear karein'); return; }
-    if (!confirm(`"${customer.name}" ka account permanently delete karein?`)) return;
-    const updated = customers.filter((c) => c.id !== selectedCustomerId);
-    dispatch({ type: 'SET_CUSTOMERS', customers: updated });
-    saveCustomers(updated);
-    dispatch({ type: 'GO_BACK' });
-    toast('Customer delete ho gaya');
-  }, [balance, customer, customers, selectedCustomerId, dispatch, saveCustomers, toast]);
 
   /* WhatsApp reminder */
   const sendReminder = useCallback(() => {
@@ -139,15 +221,21 @@ export default function UdhaarDetail() {
         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-[16px] font-bold ${avatarColor}`}>
           {avatarChar}
         </div>
-        <div className="flex-1 min-w-0">
+        {/* Clickable name area — opens profile modal */}
+        <button onClick={openProfile} className="flex-1 min-w-0 text-left cursor-pointer bg-transparent border-none outline-none">
           <div className="text-[18px] font-extrabold text-ink font-serif truncate">{customer.name}</div>
           {customer.phone && (
             <div className="text-[11px] text-softer flex items-center gap-1">
               <Phone size={10} /> +91 {customer.phone}
             </div>
           )}
-        </div>
+        </button>
         <div className="flex gap-2 shrink-0">
+          {/* Edit Profile Button */}
+          <button onClick={openProfile} title="Edit Profile"
+            className="w-9 h-9 rounded-xl bg-white/5 border border-line flex items-center justify-center cursor-pointer transition-gpu hover:bg-white/10 active:scale-90">
+            <Edit3 size={16} className="text-soft" />
+          </button>
           {balance > 0 && (
             <button onClick={sendReminder} title="WhatsApp Reminder"
               className="w-9 h-9 rounded-xl bg-green-light border border-green/20 flex items-center justify-center cursor-pointer transition-gpu hover:bg-green/25 active:scale-90">
@@ -232,7 +320,7 @@ export default function UdhaarDetail() {
         </div>
       </div>
 
-      {/* Transaction Form Modal */}
+      {/* ═══════════ Transaction Form Modal ═══════════ */}
       {showTxnForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowTxnForm(false)}>
           <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
@@ -250,14 +338,159 @@ export default function UdhaarDetail() {
                 <button onClick={() => setShowTxnForm(false)}
                   className="flex-1 glass text-soft rounded-xl py-3 text-[13px] font-semibold cursor-pointer transition-gpu hover:bg-white/10 active:scale-[0.98]">Cancel</button>
                 <button onClick={addTransaction}
-                  className={`flex-1 rounded-xl py-3 text-[13px] font-bold cursor-pointer transition-gpu active:scale-[0.98] ${
-                    txnType === 'given'
+                  className={`flex-1 rounded-xl py-3 text-[13px] font-bold cursor-pointer transition-gpu active:scale-[0.98] ${txnType === 'given'
                       ? 'bg-red/20 text-red border border-red/20 hover:bg-red/30'
                       : 'bg-accent/20 text-accent border border-accent/20 hover:bg-accent/30'
-                  }`}>
+                    }`}>
                   {txnType === 'given' ? '↑ Add Credit' : '↓ Add Payment'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ Profile Edit Modal ═══════════ */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowProfileModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-[18px] font-bold text-ink font-serif">Customer Profile</div>
+                <div className="text-[12px] text-softer">{customer.name} ki details</div>
+              </div>
+              <button onClick={() => setShowProfileModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 border border-line flex items-center justify-center cursor-pointer active:scale-90">
+                <X size={16} className="text-soft" />
+              </button>
+            </div>
+
+            {/* Customer Name (read-only) */}
+            <div className="mb-4">
+              <label className="text-[11px] font-semibold text-softer uppercase tracking-wider block mb-1.5">Customer Name</label>
+              <div className="w-full border border-line rounded-xl px-4 py-3 text-[14px] bg-bg-input text-soft cursor-not-allowed">
+                {customer.name}
+              </div>
+            </div>
+
+            {/* Editable WhatsApp Number */}
+            <div className="mb-5">
+              <label className="text-[11px] font-semibold text-accent uppercase tracking-wider block mb-1.5">WhatsApp Number</label>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-softer shrink-0">+91</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="10-digit WhatsApp number"
+                  maxLength={10}
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  className="flex-1 min-w-0 border border-line rounded-xl px-4 py-3 font-mono text-[15px] bg-bg-input outline-none focus:border-accent/40 text-ink transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <button onClick={savePhone}
+              className="w-full bg-accent/20 text-accent border border-accent/20 rounded-xl py-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2 transition-gpu hover:bg-accent/30 active:scale-[0.98] mb-4">
+              <Save size={15} /> Save Changes
+            </button>
+
+            {/* Divider */}
+            <div className="border-t border-line my-4" />
+
+            {/* Delete Account — DANGER */}
+            <div className="flex items-center gap-2.5 mb-3">
+              <AlertTriangle size={15} className="text-red shrink-0" />
+              <div className="text-[11px] text-softer">Account delete karne ke baad data wapas nahi aayega</div>
+            </div>
+            <button onClick={handleDeleteRequest}
+              className="w-full bg-red/15 text-red border border-red/20 rounded-xl py-3 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2 transition-gpu hover:bg-red/25 active:scale-[0.98]">
+              <Trash2 size={15} /> Delete Account
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ Delete Confirmation Dialog ═══════════ */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setShowDeleteConfirm(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="glass-strong max-w-[380px] w-[90%] rounded-2xl p-6 animate-sheet-up text-center">
+            <div className="w-14 h-14 rounded-full bg-red/15 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={28} className="text-red" />
+            </div>
+            <div className="text-[16px] font-bold text-ink font-serif mb-2">Account Delete Karein?</div>
+            <div className="text-[13px] text-softer mb-6 leading-relaxed">
+              Kya aap <span className="text-ink font-semibold">"{customer.name}"</span> ka Udhaar Khata account aur sabhi records permanently delete karna chahte hain?
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 glass text-soft rounded-xl py-3 text-[13px] font-semibold cursor-pointer transition-gpu hover:bg-white/10 active:scale-[0.98]">
+                Cancel
+              </button>
+              <button onClick={handleDeleteConfirmOK}
+                className="flex-1 bg-red/20 text-red border border-red/20 rounded-xl py-3 text-[13px] font-bold cursor-pointer transition-gpu hover:bg-red/30 active:scale-[0.98]">
+                OK — Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ PIN Entry Modal (Security Gate) ═══════════ */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setShowPinModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="glass-strong max-w-[360px] w-[90%] rounded-2xl p-6 animate-sheet-up">
+            {/* Header */}
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-red/15 flex items-center justify-center mx-auto mb-3">
+                <Lock size={22} className="text-red" />
+              </div>
+              <div className="text-[16px] font-bold text-ink font-serif">Security PIN Daalein</div>
+              <div className="text-[12px] text-softer mt-1">"{customer.name}" ka account delete karne ke liye</div>
+            </div>
+
+            {/* PIN Dots */}
+            <div className="flex justify-center gap-3 mb-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${i < pinInput.length ? 'bg-red scale-110 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-white/10 border border-line'
+                  }`} />
+              ))}
+            </div>
+
+            {/* Error Message */}
+            {pinError && (
+              <div className="text-center text-red text-[12px] font-semibold mb-3 animate-shake">{pinError}</div>
+            )}
+
+            {/* Keypad */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {PIN_KEYS.map((key, i) => (
+                <button
+                  key={i}
+                  onClick={() => handlePinKey(key)}
+                  disabled={key === ''}
+                  className={`h-12 rounded-xl text-[18px] font-bold cursor-pointer transition-gpu active:scale-90 ${key === '' ? 'invisible' :
+                      key === '⌫' ? 'bg-white/5 text-soft border border-line hover:bg-white/10' :
+                        'bg-white/5 text-ink border border-line hover:bg-white/10'
+                    }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+
+            {/* Submit / Cancel */}
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(''); }}
+                className="flex-1 glass text-soft rounded-xl py-3 text-[13px] font-semibold cursor-pointer transition-gpu hover:bg-white/10 active:scale-[0.98]">
+                Cancel
+              </button>
+              <button onClick={handlePinSubmit} disabled={pinInput.length < 4}
+                className="flex-1 bg-red/20 text-red border border-red/20 rounded-xl py-3 text-[13px] font-bold cursor-pointer disabled:opacity-30 transition-gpu hover:bg-red/30 active:scale-[0.98]">
+                <Lock size={14} className="inline mr-1.5" /> Delete
+              </button>
             </div>
           </div>
         </div>

@@ -3,18 +3,21 @@ import { useApp, fmt, todayKey, emptyDay, NOTES, COINS } from '../context/AppCon
 import Topbar from './Topbar';
 import { Key, Shield, Gauge, Download, Trash2, AlertTriangle, FileText } from 'lucide-react';
 
+/* Strict financial rounding — same as AppContext */
+const r2 = (n) => Math.round(((n || 0) + Number.EPSILON) * 100) / 100;
+
 function computeTotals(h) {
-  const cashT    = NOTES.reduce((s, n) => s + n * (+h.notes?.[n] || 0), 0) + COINS.reduce((s, c) => s + c * (+h.coins?.[c] || 0), 0);
-  const digitalT = (+h.paytm || 0) + (+h.pos || 0);
-  const creditT  = (h.credits || []).filter((c) => !c.paid).reduce((s, c) => s + (+c.amount || 0), 0);
-  const expenseT = (h.expenses || []).reduce((s, e) => s + (+e.amount || 0), 0);
-  const clinicalT= (h.clinicals || []).reduce((s, c) => s + (+c.amount || 0), 0);
-  const netT     = cashT + digitalT + creditT + clinicalT + expenseT;
-  const diffV    = netT - (+h.expected || 0);
+  const cashT    = r2(NOTES.reduce((s, n) => s + n * (+h.notes?.[n] || 0), 0) + COINS.reduce((s, c) => s + c * (+h.coins?.[c] || 0), 0));
+  const digitalT = r2((+h.paytm || 0) + (+h.pos || 0));
+  const creditT  = r2((h.credits || []).filter((c) => !c.paid).reduce((s, c) => s + (+c.amount || 0), 0));
+  const expenseT = r2((h.expenses || []).reduce((s, e) => s + (+e.amount || 0), 0));
+  const clinicalT= r2((h.clinicals || []).reduce((s, c) => s + (+c.amount || 0), 0));
+  const netT     = r2(cashT + digitalT + creditT + clinicalT + expenseT);
+  const diffV    = r2(netT - (+h.expected || 0));
   return { cashT, digitalT, creditT, expenseT, clinicalT, netT, diffV };
 }
 
-function fmtNum(n) { return '₹' + Math.round((n || 0) * 100 / 100).toLocaleString('en-IN'); }
+function fmtNum(n) { return '₹' + r2(n).toLocaleString('en-IN'); }
 
 export default function SettingsScreen() {
   const { state, dispatch, storage, updateSync, toast } = useApp();

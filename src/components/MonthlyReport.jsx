@@ -32,6 +32,7 @@ export default function MonthlyReport() {
 
     let totalCash = 0, totalDigital = 0, totalCredit = 0, totalExpense = 0, totalClinical = 0, totalNet = 0, totalExpected = 0;
     let maxDay = null, minDay = null, maxNet = -Infinity, minNet = Infinity;
+    const r2 = (n) => Math.round(((n || 0) + Number.EPSILON) * 100) / 100;
 
     entries.forEach((h) => {
       const t = dayTotals(h);
@@ -42,8 +43,10 @@ export default function MonthlyReport() {
       if (t.net < minNet) { minNet = t.net; minDay = h.date; }
     });
 
-    const avgNet = totalNet / entries.length;
-    const diff   = totalNet - totalExpected;
+    totalCash = r2(totalCash); totalDigital = r2(totalDigital); totalCredit = r2(totalCredit);
+    totalExpense = r2(totalExpense); totalClinical = r2(totalClinical); totalNet = r2(totalNet); totalExpected = r2(totalExpected);
+    const avgNet = r2(totalNet / entries.length);
+    const diff   = r2(totalNet - totalExpected);
     return { count: entries.length, totalCash, totalDigital, totalCredit, totalExpense, totalClinical, totalNet, totalExpected, avgNet, diff, maxNet, maxDay, minNet, minDay };
   }, [history, year, month, reportMode]);
 

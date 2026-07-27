@@ -103,6 +103,7 @@ const initialState = {
   authFailed: false,
   customers: loadCustomersSync(),
   selectedCustomerId: null,
+  refreshing: false,
 };
 
 function reducer(state, action) {
@@ -151,6 +152,8 @@ function reducer(state, action) {
       return { ...state, customers: action.customers };
     case 'SET_SELECTED_CUSTOMER':
       return { ...state, selectedCustomerId: action.id };
+    case 'SET_REFRESHING':
+      return { ...state, refreshing: action.refreshing };
     default:
       return state;
   }
@@ -167,6 +170,9 @@ export function AppProvider({ children }) {
   const lockTimerRef = useRef(null);
   const toastTimerRef = useRef(null);
   const customerSaveRef = useRef(null);
+  const backExitRef = useRef(false);
+  const backExitTimerRef = useRef(null);
+  const pendingWriteRef = useRef(0);  /* timestamp of last local write — blocks onSnapshot overwrites */
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -209,26 +215,48 @@ export function AppProvider({ children }) {
     };
   }, [resetLock]);
 
-  /* --- Scroll to top on every page change (Fix #6) --------------- */
+  /* --- Scroll to top on every page change ------------------------ */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [state.page]);
 
-  /* --- Mobile hardware back button (Fix #2) ---------------------- */
+  /* --- Mobile hardware back button — DOUBLE TAP TO EXIT ---------- */
   useEffect(() => {
-    // Push a dummy state so popstate fires instead of closing tab
     const pushDummyState = () => {
       window.history.pushState({ page: stateRef.current.page }, '');
     };
 
-    const handlePopState = (e) => {
+    const handlePopState = () => {
       const cur = stateRef.current.page;
-      const noBack = ['splash', 'lock', 'home'];
-      if (noBack.includes(cur)) {
-        // Prevent browser from going back / closing
+
+      // On Splash/Lock: just absorb, never exit
+      if (cur === 'splash' || cur === 'lock') {
         pushDummyState();
         return;
       }
+
+      // On Home: double-tap to exit
+      if (cur === 'home') {
+        if (backExitRef.current) {
+          // Second tap within 2 seconds — allow browser to naturally go back/exit
+          backExitRef.current = false;
+          clearTimeout(backExitTimerRef.current);
+          // Don't push dummy state, let browser exit naturally
+          return;
+        }
+        // First tap — show toast, start 2-second window
+        backExitRef.current = true;
+        pushDummyState();
+        dispatch({ type: 'TOAST', msg: 'Exit karne ke liye dobara Back dabayein' });
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 2200);
+        backExitTimerRef.current = setTimeout(() => {
+          backExitRef.current = false;
+        }, 2000);
+        return;
+      }
+
+      // On any other page: navigate back
       dispatch({ type: 'GO_BACK' });
       pushDummyState();
     };
@@ -258,17 +286,18 @@ export function AppProvider({ children }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  /* --- Realtime listeners (Fix #1 & #3) -------------------------- */
+  /* --- Realtime listeners (onSnapshot) — guarded by pendingWrite -- */
   useEffect(() => {
-    // Listen for realtime day updates from any device
     const dayKey = state.viewDate || todayKey();
     const unsubDay = listenToDay(dayKey, (data) => {
-      // Only merge if we're on the same date — don't overwrite current edits mid-type
+      /* If user made a local write within last 2 seconds, IGNORE the
+         incoming snapshot — it contains stale pre-save data that would
+         overwrite the user's add/delete action and cause flapping. */
+      if (Date.now() - pendingWriteRef.current < 2000) return;
       if (stateRef.current.viewDate === dayKey) {
         dispatch({ type: 'SET_DAY', day: { ...emptyDay(dayKey), ...data } });
       }
     });
-
     return () => unsubDay();
   }, [state.viewDate]);
 
@@ -279,15 +308,55 @@ export function AppProvider({ children }) {
     return () => unsubCustomers();
   }, []);
 
-  /* --- debounced save -------------------------------------------- */
-  const saveDay = useCallback(() => {
+  /* --- Manual refresh function ----------------------------------- */
+  const refreshData = useCallback(async () => {
+    dispatch({ type: 'SET_REFRESHING', refreshing: true });
+    try {
+      const dayKey = stateRef.current.viewDate || todayKey();
+      // Fetch latest day from Firestore
+      const dayResult = await storage.get('day:' + dayKey);
+      if (dayResult?.value) {
+        dispatch({ type: 'SET_DAY', day: { ...emptyDay(dayKey), ...JSON.parse(dayResult.value) } });
+      }
+      // Fetch latest customers
+      const custResult = await storage.get('customers');
+      if (custResult?.value) {
+        const list = JSON.parse(custResult.value);
+        dispatch({ type: 'SET_CUSTOMERS', customers: list });
+        try { localStorage.setItem('sarita_customers', JSON.stringify(list)); } catch {}
+      }
+      // Fetch latest history
+      const histResult = await storage.get('history');
+      if (histResult?.value) {
+        dispatch({ type: 'SET_HISTORY', history: JSON.parse(histResult.value) });
+      }
+      updateSync();
+      flushPending(updateSync, toast);
+    } catch (e) {
+      console.error('Refresh failed', e);
+    }
+    dispatch({ type: 'SET_REFRESHING', refreshing: false });
+  }, [updateSync, toast]);
+
+  /* --- (REMOVED: 5-second polling — onSnapshot handles realtime sync.
+         Polling was causing state flapping by overwriting fresh local
+         edits with stale Firestore cache.) ----------------------------- */
+
+  /* --- save with instant mode for button clicks ------------------- */
+  const saveDay = useCallback((immediate = false) => {
     if (state.viewDate !== todayKey() && state.viewDate !== state.editingReopened) return;
+    pendingWriteRef.current = Date.now();  /* block onSnapshot overwrites */
     clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
+    const doSave = async () => {
       try {
         await storage.set('day:' + state.viewDate, JSON.stringify(state.day), updateSync);
       } catch { /* already queued */ }
-    }, 300);
+    };
+    if (immediate) {
+      doSave();
+    } else {
+      saveTimerRef.current = setTimeout(doSave, 300);
+    }
   }, [state.viewDate, state.editingReopened, state.day, updateSync]);
 
   /* --- customer save: SYNCHRONOUS localStorage + async Firestore - */
@@ -319,7 +388,7 @@ export function AppProvider({ children }) {
   const value = {
     state, dispatch,
     isToday, toast, saveDay, saveCustomers, updateSync, resetLock,
-    storage,
+    storage, refreshData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
