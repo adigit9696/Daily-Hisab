@@ -322,8 +322,8 @@ export default function UdhaarDetail() {
 
       {/* ═══════════ Transaction Form Modal ═══════════ */}
       {showTxnForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-fade-in" onClick={() => setShowTxnForm(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-backdrop animate-fade-in" onClick={() => setShowTxnForm(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="modal-solid w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
             <div className={`text-[18px] font-bold font-serif mb-1 ${txnType === 'given' ? 'text-red' : 'text-accent'}`}>
               {txnType === 'given' ? '↑ Credit Given' : '↓ Payment Received'}
             </div>
@@ -352,8 +352,8 @@ export default function UdhaarDetail() {
 
       {/* ═══════════ Profile Edit Modal ═══════════ */}
       {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-fade-in" onClick={() => setShowProfileModal(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-backdrop animate-fade-in" onClick={() => setShowProfileModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="modal-solid w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -415,8 +415,8 @@ export default function UdhaarDetail() {
 
       {/* ═══════════ Delete Confirmation Dialog ═══════════ */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in" onClick={() => setShowDeleteConfirm(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="glass-strong max-w-[380px] w-[90%] rounded-2xl p-6 animate-sheet-up text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop animate-fade-in" onClick={() => setShowDeleteConfirm(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="modal-solid max-w-[380px] w-[90%] rounded-2xl p-6 animate-sheet-up text-center">
             <div className="w-14 h-14 rounded-full bg-red/15 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={28} className="text-red" />
             </div>
@@ -440,8 +440,8 @@ export default function UdhaarDetail() {
 
       {/* ═══════════ PIN Entry Modal (Security Gate) ═══════════ */}
       {showPinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in" onClick={() => setShowPinModal(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="glass-strong max-w-[360px] w-[90%] rounded-2xl p-6 animate-sheet-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop animate-fade-in" onClick={() => setShowPinModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="modal-solid max-w-[360px] w-[90%] rounded-2xl p-6 animate-sheet-up">
             {/* Header */}
             <div className="text-center mb-5">
               <div className="w-12 h-12 rounded-full bg-red/15 flex items-center justify-center mx-auto mb-3">

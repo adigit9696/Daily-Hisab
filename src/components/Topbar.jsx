@@ -1,8 +1,8 @@
 import { useApp, dateLbl } from '../context/AppContext';
-import { ChevronLeft, Home } from 'lucide-react';
+import { ChevronLeft, Home, Sun, Moon } from 'lucide-react';
 
 export default function Topbar({ title, dateStr }) {
-  const { dispatch } = useApp();
+  const { state, dispatch, toggleTheme } = useApp();
 
   return (
     <div className="glass sticky top-0 z-30 px-5 py-4 flex items-center gap-3.5 border-b border-line">
@@ -16,6 +16,16 @@ export default function Topbar({ title, dateStr }) {
         <div className="text-[20px] sm:text-[22px] font-extrabold text-ink font-serif tracking-tight">{title}</div>
         {dateStr && <div className="text-[11px] text-softer mt-0.5">{dateLbl(dateStr)}</div>}
       </div>
+      <button
+        onClick={toggleTheme}
+        className="w-9 h-9 rounded-xl bg-white/5 border border-line flex items-center justify-center cursor-pointer transition-gpu hover:bg-accent/15 hover:border-accent/30 active:scale-90"
+        title={state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+      >
+        {state.theme === 'dark'
+          ? <Sun size={17} className="text-amber" />
+          : <Moon size={17} className="text-accent" />
+        }
+      </button>
       <button
         onClick={() => dispatch({ type: 'GO_HOME' })}
         className="w-9 h-9 rounded-xl bg-white/5 border border-line flex items-center justify-center cursor-pointer transition-gpu hover:bg-white/10 hover:border-accent/30 active:scale-90"

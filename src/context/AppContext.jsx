@@ -108,6 +108,7 @@ const initialState = {
   customers: loadCustomersSync(),
   selectedCustomerId: null,
   refreshing: false,
+  theme: (() => { try { return localStorage.getItem('sarita_theme') || 'dark'; } catch { return 'dark'; } })(),
 };
 
 function reducer(state, action) {
@@ -158,6 +159,8 @@ function reducer(state, action) {
       return { ...state, selectedCustomerId: action.id };
     case 'SET_REFRESHING':
       return { ...state, refreshing: action.refreshing };
+    case 'SET_THEME':
+      return { ...state, theme: action.theme };
     default:
       return state;
   }
@@ -178,6 +181,17 @@ export function AppProvider({ children }) {
   const backExitTimerRef = useRef(null);
   const pendingWriteRef = useRef(0);  /* timestamp of last local write — blocks onSnapshot overwrites */
   const stateRef = useRef(state);
+
+  /* --- Theme system -------------------------------------------- */
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', state.theme);
+  }, [state.theme]);
+
+  const toggleTheme = useCallback(() => {
+    const next = state.theme === 'dark' ? 'light' : 'dark';
+    dispatch({ type: 'SET_THEME', theme: next });
+    try { localStorage.setItem('sarita_theme', next); } catch {}
+  }, [state.theme, dispatch]);
   stateRef.current = state;
 
   const isToday = useCallback(() => {
@@ -392,7 +406,7 @@ export function AppProvider({ children }) {
   const value = {
     state, dispatch,
     isToday, toast, saveDay, saveCustomers, updateSync, resetLock,
-    storage, refreshData,
+    storage, refreshData, toggleTheme,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

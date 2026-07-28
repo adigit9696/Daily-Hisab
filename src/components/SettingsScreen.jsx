@@ -76,29 +76,26 @@ export default function SettingsScreen() {
       const [yr, mn] = monthKey.split('-');
       const monthName = new Date(+yr, +mn - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-      tableRows += `<tr style="background:#1a3a3c;"><td colspan="10" style="padding:10px 12px;font-weight:700;color:#34d399;font-size:14px;border:1px solid #2a5a5c;">📅 ${monthName}</td></tr>`;
+      tableRows += `<tr class="month-header"><td colspan="10">📅 ${monthName}</td></tr>`;
 
       let mCash = 0, mDigital = 0, mCredit = 0, mExpense = 0, mClinical = 0, mNet = 0, mExpected = 0;
 
-      days.forEach((h, i) => {
+      days.forEach((h) => {
         const t = computeTotals(h);
         const status = t.diffV === 0 ? '✓ Match' : t.diffV < 0 ? '⚠ Short' : '↑ Excess';
-        const statusColor = t.diffV === 0 ? '#34d399' : t.diffV < 0 ? '#ef4444' : '#f59e0b';
-        const bg = i % 2 === 0 ? '#0f2a2c' : '#0b1d1e';
-
         const dateStr = new Date(h.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', weekday: 'short' });
 
-        tableRows += `<tr style="background:${bg};">
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#8fa3a0;font-size:12px;">${dateStr}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#f59e0b;font-family:monospace;text-align:right;">${fmtNum(t.cashT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#5eead4;font-family:monospace;text-align:right;">${fmtNum(t.digitalT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#c084fc;font-family:monospace;text-align:right;">${fmtNum(t.creditT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#fb923c;font-family:monospace;text-align:right;">${fmtNum(t.expenseT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#60a5fa;font-family:monospace;text-align:right;">${fmtNum(t.clinicalT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#34d399;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(t.netT)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:#8fa3a0;font-family:monospace;text-align:right;">${fmtNum(+h.expected || 0)}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:${statusColor};font-family:monospace;text-align:right;font-weight:600;">${fmtNum(Math.abs(t.diffV))}</td>
-          <td style="padding:8px 10px;border:1px solid #1a3a3c;color:${statusColor};font-size:11px;font-weight:600;">${status}</td>
+        tableRows += `<tr>
+          <td style="padding:6px 10px;border:1px solid #ccc;font-size:11px;">${dateStr}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(t.cashT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(t.digitalT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(t.creditT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(t.expenseT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(t.clinicalT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;font-weight:700;">${fmtNum(t.netT)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(+h.expected || 0)}</td>
+          <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(Math.abs(t.diffV))}</td>
+          <td style="padding:6px 10px;border:1px solid #ccc;font-size:10px;font-weight:600;">${status}</td>
         </tr>`;
 
         mCash += t.cashT; mDigital += t.digitalT; mCredit += t.creditT;
@@ -107,17 +104,17 @@ export default function SettingsScreen() {
 
       // Month subtotal
       const mDiff = mNet - mExpected;
-      tableRows += `<tr style="background:#1a3a3c;border-top:2px solid #34d399;">
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#34d399;font-weight:700;font-size:12px;">Subtotal (${days.length} days)</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#f59e0b;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mCash)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#5eead4;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mDigital)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#c084fc;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mCredit)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#fb923c;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mExpense)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#60a5fa;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mClinical)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#34d399;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mNet)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:#8fa3a0;font-family:monospace;text-align:right;font-weight:700;">${fmtNum(mExpected)}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;color:${mDiff === 0 ? '#34d399' : mDiff < 0 ? '#ef4444' : '#f59e0b'};font-family:monospace;text-align:right;font-weight:700;">${fmtNum(Math.abs(mDiff))}</td>
-        <td style="padding:8px 10px;border:1px solid #2a5a5c;"></td>
+      tableRows += `<tr class="subtotal-row">
+        <td style="padding:6px 10px;border:1px solid #ccc;">Subtotal (${days.length} days)</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mCash)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mDigital)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mCredit)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mExpense)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mClinical)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mNet)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(mExpected)}</td>
+        <td class="amt" style="padding:6px 10px;border:1px solid #ccc;">${fmtNum(Math.abs(mDiff))}</td>
+        <td style="padding:6px 10px;border:1px solid #ccc;"></td>
       </tr>`;
 
       grandCash += mCash; grandDigital += mDigital; grandCredit += mCredit;
@@ -127,52 +124,91 @@ export default function SettingsScreen() {
     const grandDiff = grandNet - grandExpected;
     const printDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
+    /* ── Udhaar Khata Outstanding Summary ── */
+    const customers = state.customers || [];
+    const activeCustomers = customers.filter((c) => {
+      const bal = (c.transactions || []).reduce((s, t) => s + (t.type === 'given' ? t.amount : -t.amount), 0);
+      return bal > 0;
+    });
+    let totalOutstanding = 0;
+    activeCustomers.forEach((c) => {
+      totalOutstanding += (c.transactions || []).reduce((s, t) => s + (t.type === 'given' ? t.amount : -t.amount), 0);
+    });
+
+    let udhaarRows = '';
+    activeCustomers.forEach((c) => {
+      const bal = (c.transactions || []).reduce((s, t) => s + (t.type === 'given' ? t.amount : -t.amount), 0);
+      udhaarRows += `<tr><td style="padding:6px 10px;border:1px solid #ccc;">${c.name}</td><td style="padding:6px 10px;border:1px solid #ccc;">${c.phone ? '+91 ' + c.phone : '—'}</td><td class="amt" style="padding:6px 10px;border:1px solid #ccc;text-align:right;font-family:Consolas,monospace;font-weight:600;">${fmtNum(bal)}</td></tr>`;
+    });
+
     const html = `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8" />
-<title>Sarita Pharmacy — Daily Hisab Report</title>
+<title>Sarita Pharmacy — Hisab Report</title>
 <style>
-  @media print {
-    @page { size: A4 landscape; margin: 12mm; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: #0b1d1e; color: #e8edec; margin: 0; padding: 24px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th { background: #0f3d3e; color: #34d399; padding: 10px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #2a5a5c; }
-  th:not(:first-child) { text-align: right; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; padding: 28px 32px; font-size: 12px; color: #1a1a1a; line-height: 1.5; }
+  .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 14px; margin-bottom: 18px; }
+  .header h1 { font-size: 18px; font-weight: 800; letter-spacing: 1px; margin-bottom: 2px; }
+  .header .sub { font-size: 12px; color: #555; }
+  .section { margin-bottom: 16px; }
+  .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #bbb; padding-bottom: 4px; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  th, td { padding: 6px 10px; border: 1px solid #ccc; text-align: left; font-size: 11px; }
+  th { background: #f0f0f0; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .amt { text-align: right; font-family: 'Consolas', monospace; font-weight: 600; }
+  .month-header td { background: #e8e8e8; font-weight: 700; font-size: 12px; }
+  .subtotal-row td { font-weight: 700; border-top: 2px solid #999; background: #f5f5f5; }
+  .grand-row td { font-weight: 800; font-size: 12px; border-top: 3px solid #222; background: #e8e8e8; }
+  .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #bbb; font-size: 10px; color: #888; }
+  @media print { @page { size: A4 landscape; margin: 12mm; } body { padding: 16px 20px; } }
 </style>
 </head><body>
-  <div style="text-align:center;margin-bottom:24px;">
-    <div style="font-size:26px;font-weight:800;color:#34d399;letter-spacing:-0.5px;">✚ Sarita Pharmacy</div>
-    <div style="font-size:13px;color:#8fa3a0;margin-top:4px;">Daily Hisab — Financial Report</div>
-    <div style="font-size:11px;color:#5b7573;margin-top:2px;">Generated: ${printDate} | ${allDays.length} entries</div>
+  <div class="header">
+    <h1>SARITA PHARMACY</h1>
+    <div class="sub">DAILY HISAB — FINANCIAL REPORT</div>
+    <div class="sub">Generated: ${printDate} | ${allDays.length} entries</div>
   </div>
+
+  <div class="section"><div class="section-title">Day-wise Financial Breakdown</div>
   <table>
     <thead>
       <tr>
-        <th style="width:100px;">Date</th>
-        <th>Cash</th><th>Digital</th><th>Credit</th><th>Expense</th><th>Clinical</th>
-        <th>Net</th><th>Expected</th><th>Diff</th><th style="width:70px;">Status</th>
+        <th style="width:90px;">Date</th>
+        <th class="amt">Cash</th><th class="amt">Digital</th><th class="amt">Credit</th><th class="amt">Expense</th><th class="amt">Clinical</th>
+        <th class="amt">Net</th><th class="amt">Expected</th><th class="amt">Diff</th><th style="width:60px;">Status</th>
       </tr>
     </thead>
     <tbody>
       ${tableRows}
-      <tr style="background:#0f3d3e;border-top:3px solid #34d399;">
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#34d399;font-weight:800;font-size:13px;">GRAND TOTAL</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#f59e0b;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandCash)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#5eead4;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandDigital)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#c084fc;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandCredit)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#fb923c;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandExpense)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#60a5fa;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandClinical)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#34d399;font-family:monospace;text-align:right;font-weight:800;font-size:14px;">${fmtNum(grandNet)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:#8fa3a0;font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(grandExpected)}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:${grandDiff === 0 ? '#34d399' : grandDiff < 0 ? '#ef4444' : '#f59e0b'};font-family:monospace;text-align:right;font-weight:800;font-size:13px;">${fmtNum(Math.abs(grandDiff))}</td>
-        <td style="padding:12px 10px;border:2px solid #34d399;color:${grandDiff === 0 ? '#34d399' : grandDiff < 0 ? '#ef4444' : '#f59e0b'};font-weight:800;">${grandDiff === 0 ? '✓' : grandDiff < 0 ? '⚠ Short' : '↑ Excess'}</td>
+      <tr class="grand-row">
+        <td>GRAND TOTAL</td>
+        <td class="amt">${fmtNum(grandCash)}</td>
+        <td class="amt">${fmtNum(grandDigital)}</td>
+        <td class="amt">${fmtNum(grandCredit)}</td>
+        <td class="amt">${fmtNum(grandExpense)}</td>
+        <td class="amt">${fmtNum(grandClinical)}</td>
+        <td class="amt">${fmtNum(grandNet)}</td>
+        <td class="amt">${fmtNum(grandExpected)}</td>
+        <td class="amt">${fmtNum(Math.abs(grandDiff))}</td>
+        <td>${grandDiff === 0 ? '✓' : grandDiff < 0 ? '⚠ Short' : '↑ Excess'}</td>
       </tr>
     </tbody>
-  </table>
-  <div style="text-align:center;margin-top:24px;color:#5b7573;font-size:10px;">This report was generated by Sarita Pharmacy Daily Hisab App</div>
-  <script>window.onload = () => window.print();</script>
+  </table></div>
+
+  ${activeCustomers.length > 0 ? `
+  <div class="section"><div class="section-title">Udhaar Khata — Outstanding Balances (${activeCustomers.length} customers)</div>
+  <table>
+    <thead><tr><th>Customer Name</th><th>Phone</th><th class="amt">Outstanding</th></tr></thead>
+    <tbody>
+      ${udhaarRows}
+      <tr class="grand-row"><td colspan="2">Total Outstanding</td><td class="amt">${fmtNum(totalOutstanding)}</td></tr>
+    </tbody>
+  </table></div>
+  ` : ''}
+
+  <div class="footer">This is a computer-generated report from Sarita Pharmacy Daily Hisab System.<br/>Printed on ${printDate}</div>
+  <script>window.onload = () => window.print();<\/script>
 </body></html>`;
 
     const blob = new Blob([html], { type: 'text/html' });

@@ -151,8 +151,8 @@ export default function UdhaarScreen() {
 
         {/* Add Customer Form (modal-like overlay) */}
         {showAddForm && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60  animate-fade-in" onClick={() => setShowAddForm(false)}>
-            <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-backdrop animate-fade-in" onClick={() => setShowAddForm(false)}>
+            <div onClick={(e) => e.stopPropagation()} className="modal-solid w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
               <div className="text-[18px] font-bold text-ink font-serif mb-1">New Customer</div>
               <div className="text-[12px] text-softer mb-5">Customer ka naam aur WhatsApp number daalein</div>
 

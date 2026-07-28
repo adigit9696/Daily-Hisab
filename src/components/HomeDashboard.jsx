@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useApp, todayKey, dateLbl, fmt, cashT, digitalT, creditT, expenseT, clinicalT, diffV, emptyDay } from '../context/AppContext';
 import { getSyncState } from '../services/storage';
-import { Banknote, CreditCard, Users, DollarSign, Activity, Target, CheckSquare, BarChart3, Clock, Settings, Lock, ChevronRight, Calendar, Download, AlertTriangle, Edit3, RefreshCw } from 'lucide-react';
+import { Banknote, CreditCard, Users, DollarSign, Activity, Target, CheckSquare, BarChart3, Clock, Settings, Lock, ChevronRight, Calendar, Download, AlertTriangle, Edit3, RefreshCw, Sun, Moon } from 'lucide-react';
 
 export default function HomeDashboard() {
-  const { state, dispatch, toast, storage, updateSync, isToday, refreshData } = useApp();
+  const { state, dispatch, toast, storage, updateSync, isToday, refreshData, toggleTheme } = useApp();
   const { day, viewDate, history, lastBackup, editingReopened, syncState, refreshing } = state;
 
   const d = diffV(day);
@@ -111,6 +111,14 @@ export default function HomeDashboard() {
             <button onClick={() => { refreshData(); toast('Data refresh ho raha hai…'); }}
               className="w-10 h-10 rounded-xl glass flex items-center justify-center cursor-pointer transition-gpu hover:bg-accent/15 hover:border-accent/20 active:scale-90" title="Refresh">
               <RefreshCw size={18} className={`text-accent ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={toggleTheme}
+              className="w-10 h-10 rounded-xl glass flex items-center justify-center cursor-pointer transition-gpu hover:bg-accent/15 hover:border-accent/20 active:scale-90"
+              title={state.theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
+              {state.theme === 'dark'
+                ? <Sun size={18} className="text-amber" />
+                : <Moon size={18} className="text-accent" />
+              }
             </button>
             <button onClick={() => { dispatch({ type: 'SET_PIN_TARGET', target: null }); dispatch({ type: 'SET_PAGE', page: 'lock' }); }}
               className="w-10 h-10 rounded-xl glass flex items-center justify-center cursor-pointer transition-gpu hover:bg-white/10 hover:border-accent/20 active:scale-90" title="Lock">

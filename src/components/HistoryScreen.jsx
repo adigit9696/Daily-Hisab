@@ -37,10 +37,10 @@ export default function HistoryScreen() {
     const coinRows = COINS.map((c) => ({ denom: c, count: +entry.coins?.[c] || 0, total: c * (+entry.coins?.[c] || 0) })).filter((r) => r.count > 0);
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDetail(null)}>
-        <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[600px] rounded-2xl animate-sheet-up max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4" onClick={() => setDetail(null)}>
+        <div onClick={(e) => e.stopPropagation()} className="modal-solid w-full max-w-[600px] rounded-2xl animate-sheet-up max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 z-10 glass-strong rounded-t-2xl px-5 py-4 flex justify-between items-center border-b border-line">
+          <div className="sticky top-0 z-10 modal-solid rounded-t-2xl px-5 py-4 flex justify-between items-center border-b border-line">
             <div>
               <div className="text-[18px] font-extrabold text-ink font-serif">{dateLbl(entry.date)}</div>
               <div className="text-[11px] text-softer">Closed: {entry.closedAt ? new Date(entry.closedAt).toLocaleString('en-IN') : '—'}</div>
