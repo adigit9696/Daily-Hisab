@@ -22,7 +22,13 @@ export const CLINICAL_RATES = {
 };
 export const CLINICAL_TYPES = Object.keys(CLINICAL_RATES);
 
-export const todayKey = () => new Date().toISOString().slice(0, 10);
+export const todayKey = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 /* ── Title Case utility for name consistency ── */
 export const capitalizeWords = (str) =>
