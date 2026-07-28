@@ -109,6 +109,7 @@ const initialState = {
   selectedCustomerId: null,
   refreshing: false,
   theme: (() => { try { return localStorage.getItem('sarita_theme') || 'dark'; } catch { return 'dark'; } })(),
+  showExitModal: false,
 };
 
 function reducer(state, action) {
@@ -161,6 +162,10 @@ function reducer(state, action) {
       return { ...state, refreshing: action.refreshing };
     case 'SET_THEME':
       return { ...state, theme: action.theme };
+    case 'SHOW_EXIT_MODAL':
+      return { ...state, showExitModal: true };
+    case 'HIDE_EXIT_MODAL':
+      return { ...state, showExitModal: false };
     default:
       return state;
   }
@@ -238,7 +243,49 @@ export function AppProvider({ children }) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [state.page]);
 
-  /* --- Mobile hardware back button — DOUBLE TAP TO EXIT ---------- */
+  /* --- Midnight 12 AM Auto-Date Rollover Listener -------------- */
+  const lastCheckedDateRef = useRef(todayKey());
+
+  const checkDateRollover = useCallback(async () => {
+    const nowKey = todayKey();
+    if (nowKey !== lastCheckedDateRef.current) {
+      const prevKey = lastCheckedDateRef.current;
+      lastCheckedDateRef.current = nowKey;
+
+      const curState = stateRef.current;
+      // If active date was previous day or auto-following today
+      if (curState.viewDate === prevKey || curState.viewDate < nowKey) {
+        dispatch({ type: 'SET_VIEW_DATE', date: nowKey });
+
+        try {
+          const raw = await storage.get('day:' + nowKey);
+          const dayData = raw ? JSON.parse(raw) : emptyDay(nowKey);
+          dispatch({ type: 'SET_DAY', day: dayData });
+        } catch {
+          dispatch({ type: 'SET_DAY', day: emptyDay(nowKey) });
+        }
+
+        toast('Naya Din Shuru — Aaj ka Fresh Hisab Dashboard ready ✓');
+      }
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    checkDateRollover();
+    const interval = setInterval(checkDateRollover, 30000);
+    const onVis = () => { if (!document.hidden) checkDateRollover(); };
+    const onFocus = () => checkDateRollover();
+
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [checkDateRollover]);
+
+  /* --- Mobile hardware back button & Exit Confirmation ----------- */
   useEffect(() => {
     const pushDummyState = () => {
       window.history.pushState({ page: stateRef.current.page }, '');
@@ -253,28 +300,14 @@ export function AppProvider({ children }) {
         return;
       }
 
-      // On Home: double-tap to exit
+      // On Home: trigger Exit Confirmation Modal
       if (cur === 'home') {
-        if (backExitRef.current) {
-          // Second tap within 2 seconds — allow browser to naturally go back/exit
-          backExitRef.current = false;
-          clearTimeout(backExitTimerRef.current);
-          // Don't push dummy state, let browser exit naturally
-          return;
-        }
-        // First tap — show toast, start 2-second window
-        backExitRef.current = true;
         pushDummyState();
-        dispatch({ type: 'TOAST', msg: 'Exit karne ke liye dobara Back dabayein' });
-        clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 2200);
-        backExitTimerRef.current = setTimeout(() => {
-          backExitRef.current = false;
-        }, 2000);
+        dispatch({ type: 'SHOW_EXIT_MODAL' });
         return;
       }
 
-      // On any other page: navigate back
+      // On any other sub-page: navigate back in app stack
       dispatch({ type: 'GO_BACK' });
       pushDummyState();
     };

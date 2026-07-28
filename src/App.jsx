@@ -15,6 +15,7 @@ import UdhaarDetail from './components/UdhaarDetail';
 import MonthlyReport from './components/MonthlyReport';
 import SettingsScreen from './components/SettingsScreen';
 import Toast from './components/Toast';
+import ExitModal from './components/ExitModal';
 
 const SCREENS = {
   splash:   Splash,
@@ -42,6 +43,7 @@ export default function App() {
     <div className="w-full min-h-dvh bg-mesh">
       <Screen />
       <Toast />
+      <ExitModal />
     </div>
   );
 }
