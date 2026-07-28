@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp, fmt, creditT, todayKey } from '../context/AppContext';
+import { useApp, fmt, creditT, todayKey, capitalizeWords } from '../context/AppContext';
 import Topbar from './Topbar';
 import NavFooter from './NavFooter';
 import { Plus, Trash2, Phone } from 'lucide-react';
@@ -16,10 +16,11 @@ export default function CreditEntry() {
   const addCredit = () => {
     if (!name.trim()) { toast('Party name daalein'); return; }
     if (!(+amount > 0)) { toast('Amount daalein'); return; }
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (cleanPhone.length !== 10) { toast('10-digit WhatsApp number daalein'); return; }
 
     const parsedAmount = parseFloat(amount);
-    const cleanName  = name.trim();
-    const cleanPhone = phone.trim().replace(/\D/g, '');
+    const cleanName  = capitalizeWords(name.trim());
 
     /* ── 1. Add to today's daily credit list ── */
     const creditItem = {
@@ -96,14 +97,12 @@ export default function CreditEntry() {
       <div className="px-5 sm:px-8 lg:px-12 max-w-4xl mx-auto pt-4 pb-10">
         {!readonly && (
           <div className="glass rounded-2xl p-5 mb-4 flex flex-col gap-3 animate-card-in">
-            <input type="text" placeholder="Party ka naam" value={name} onChange={(e) => setName(e.target.value)} className={inputCls + ' !flex-none w-full'} />
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <input type="number" placeholder="Amount" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls + ' font-mono min-w-0 w-full'} />
-              <div className="flex items-center gap-1.5 border border-line rounded-xl px-3.5 py-2.5 bg-bg-input focus-within:border-accent/40 transition-colors min-w-0 w-full">
-                <Phone size={14} className="text-softer shrink-0" />
-                <input type="tel" placeholder="WhatsApp No." maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  className="border-none bg-transparent outline-none text-[14px] font-mono flex-1 min-w-0 text-ink placeholder:text-softer" />
-              </div>
+            <input type="text" placeholder="Party ka naam *" value={name} onChange={(e) => setName(capitalizeWords(e.target.value))} className={inputCls + ' !flex-none w-full'} />
+            <input type="number" placeholder="₹ Amount *" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputCls + ' !flex-none w-full font-mono text-[16px]'} />
+            <div className="flex items-center gap-1.5 border border-line rounded-xl px-3.5 py-2.5 bg-bg-input focus-within:border-accent/40 transition-colors w-full">
+              <Phone size={14} className="text-softer shrink-0" />
+              <input type="tel" placeholder="WhatsApp No. (10 digit) *" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                className="border-none bg-transparent outline-none text-[14px] font-mono flex-1 min-w-0 text-ink placeholder:text-softer" />
             </div>
             <button onClick={addCredit}
               className="bg-credit/20 text-credit border border-credit/20 rounded-xl py-2.5 text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-2 transition-gpu hover:bg-credit/30 active:scale-[0.98]">

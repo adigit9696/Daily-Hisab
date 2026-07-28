@@ -159,13 +159,7 @@ export default function HomeDashboard() {
             <span>Edit mode — Final Hisab me jaakar Save/Close karein</span>
           </div>
         )}
-        {(lastBackup === null || backupDays >= 7) && (
-          <button onClick={() => dispatch({ type: 'PUSH_PAGE', page: 'settings' })}
-            className="flex items-center gap-2.5 bg-green-light text-accent text-[12px] font-medium px-4 py-3 rounded-2xl mt-2 cursor-pointer border border-accent/10 w-full transition-gpu hover:bg-accent/20 animate-fade-in">
-            <Download size={16} className="shrink-0" />
-            <span>{lastBackup === null ? 'Kabhi backup nahi liya — CSV export kar lein' : `${backupDays} din se backup nahi liya`}</span>
-          </button>
-        )}
+
 
         {/* ─── Reconciliation Card ─── */}
         <div className="glass-strong rounded-2xl px-5 py-5 mt-4 glow-accent animate-slide-up">

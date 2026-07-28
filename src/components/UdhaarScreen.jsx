@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useApp, fmt, shortDate } from '../context/AppContext';
+import { useApp, fmt, shortDate, capitalizeWords } from '../context/AppContext';
 import Topbar from './Topbar';
 import { Search, Plus, MessageCircle, ChevronRight, UserPlus } from 'lucide-react';
 
@@ -36,9 +36,10 @@ export default function UdhaarScreen() {
   /* ─── Add customer ─── */
   const addCustomer = useCallback(() => {
     if (!newName.trim()) { toast('Customer ka naam daalein'); return; }
+    if (newPhone.trim().replace(/\D/g, '').length !== 10) { toast('10-digit WhatsApp number daalein'); return; }
     const cust = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      name: newName.trim(),
+      name: capitalizeWords(newName.trim()),
       phone: newPhone.trim(),
       createdAt: new Date().toISOString(),
       transactions: [],
@@ -150,7 +151,7 @@ export default function UdhaarScreen() {
 
         {/* Add Customer Form (modal-like overlay) */}
         {showAddForm && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowAddForm(false)}>
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60  animate-fade-in" onClick={() => setShowAddForm(false)}>
             <div onClick={(e) => e.stopPropagation()} className="glass-strong w-full max-w-[480px] sm:rounded-2xl rounded-t-[18px] p-6 animate-sheet-up">
               <div className="text-[18px] font-bold text-ink font-serif mb-1">New Customer</div>
               <div className="text-[12px] text-softer mb-5">Customer ka naam aur WhatsApp number daalein</div>
@@ -158,7 +159,7 @@ export default function UdhaarScreen() {
               <div className="flex flex-col gap-3">
                 <div>
                   <label className="text-[11px] font-semibold text-accent uppercase tracking-wider block mb-1.5">Customer Name *</label>
-                  <input type="text" placeholder="e.g. Rajesh Kumar" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus
+                  <input type="text" placeholder="e.g. Rajesh Kumar" value={newName} onChange={(e) => setNewName(capitalizeWords(e.target.value))} autoFocus
                     className="w-full border border-line rounded-xl px-4 py-3 text-[14px] bg-bg-input outline-none focus:border-accent/40 text-ink transition-colors" />
                 </div>
                 <div>

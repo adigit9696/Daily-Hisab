@@ -24,6 +24,10 @@ export const CLINICAL_TYPES = Object.keys(CLINICAL_RATES);
 
 export const todayKey = () => new Date().toISOString().slice(0, 10);
 
+/* ── Title Case utility for name consistency ── */
+export const capitalizeWords = (str) =>
+  (str || '').replace(/\b\w/g, (ch) => ch.toUpperCase());
+
 /* ── Strict financial rounding (eliminates JS floating-point errors) ── */
 const r2 = (n) => Math.round(((n || 0) + Number.EPSILON) * 100) / 100;
 
