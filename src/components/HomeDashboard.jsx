@@ -18,10 +18,10 @@ export default function HomeDashboard() {
     { id: 'target',   icon: Target,      label: 'Expected Sale',     sub: 'Software / register ka total',  val: fmt(+day.expected || 0),    color: 'text-green',    bg: 'bg-green-light',    border: 'hover:border-green/30' },
   ];
 
-  let udTotal = 0;
-  [...history, day].forEach((h) => {
-    (h.credits || []).filter((c) => !c.paid).forEach((c) => { udTotal += (+c.amount || 0); });
-  });
+  const udTotal = (state.customers || []).reduce((sum, cust) => {
+    const bal = (cust.transactions || []).reduce((s, t) => s + (t.type === 'given' ? t.amount : -t.amount), 0);
+    return sum + Math.max(0, bal);
+  }, 0);
 
   const handleDateChange = useCallback(async (e) => {
     const val = e.target.value;

@@ -261,20 +261,18 @@ export function AppProvider({ children }) {
       const curState = stateRef.current;
       // If active date was previous day or auto-following today
       if (curState.viewDate === prevKey || curState.viewDate < nowKey) {
+        const freshDay = emptyDay(nowKey);
         dispatch({ type: 'SET_VIEW_DATE', date: nowKey });
+        dispatch({ type: 'SET_DAY', day: freshDay });
 
         try {
-          const raw = await storage.get('day:' + nowKey);
-          const dayData = raw ? JSON.parse(raw) : emptyDay(nowKey);
-          dispatch({ type: 'SET_DAY', day: dayData });
-        } catch {
-          dispatch({ type: 'SET_DAY', day: emptyDay(nowKey) });
-        }
+          await storage.set('day:' + nowKey, JSON.stringify(freshDay), updateSync);
+        } catch {}
 
         toast('Naya Din Shuru — Aaj ka Fresh Hisab Dashboard ready ✓');
       }
     }
-  }, [toast]);
+  }, [toast, updateSync]);
 
   useEffect(() => {
     checkDateRollover();
@@ -291,34 +289,52 @@ export function AppProvider({ children }) {
     };
   }, [checkDateRollover]);
 
-  /* --- Mobile hardware back button & Exit Confirmation ----------- */
+  /* --- Push state to browser history on page navigation -------- */
+  useEffect(() => {
+    try {
+      window.history.pushState({ page: state.page }, '', '');
+    } catch {}
+  }, [state.page]);
+
+  /* --- Mobile hardware back button: Sub-pages -> Home, Home -> 2-tap Exit --- */
   useEffect(() => {
     const pushDummyState = () => {
-      window.history.pushState({ page: stateRef.current.page }, '');
+      try { window.history.pushState({ page: stateRef.current.page }, '', ''); } catch {}
     };
 
     const handlePopState = () => {
       const cur = stateRef.current.page;
 
-      // On Splash/Lock: just absorb, never exit
+      // On Splash/Lock: absorb back press
       if (cur === 'splash' || cur === 'lock') {
         pushDummyState();
         return;
       }
 
-      // On Home: trigger Exit Confirmation Modal
+      // On Home: 2-tap exit gate
       if (cur === 'home') {
+        if (backExitRef.current) {
+          // Second tap within 2 seconds — allow browser to exit naturally
+          backExitRef.current = false;
+          clearTimeout(backExitTimerRef.current);
+          return;
+        }
+        backExitRef.current = true;
         pushDummyState();
-        dispatch({ type: 'SHOW_EXIT_MODAL' });
+        dispatch({ type: 'TOAST', msg: 'Exit karne ke liye dobara Back dabayein' });
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => dispatch({ type: 'HIDE_TOAST' }), 2200);
+        backExitTimerRef.current = setTimeout(() => {
+          backExitRef.current = false;
+        }, 2000);
         return;
       }
 
-      // On any other sub-page: navigate back in app stack
+      // On any sub-page: ALWAYS step back towards Home Dashboard (never exit browser)
       dispatch({ type: 'GO_BACK' });
       pushDummyState();
     };
 
-    // Initial dummy state push
     pushDummyState();
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -370,22 +386,31 @@ export function AppProvider({ children }) {
     dispatch({ type: 'SET_REFRESHING', refreshing: true });
     try {
       const dayKey = stateRef.current.viewDate || todayKey();
-      // Fetch latest day from Firestore
+      // Fetch latest day from Firestore / Storage
       const dayResult = await storage.get('day:' + dayKey);
       if (dayResult?.value) {
-        dispatch({ type: 'SET_DAY', day: { ...emptyDay(dayKey), ...JSON.parse(dayResult.value) } });
+        try {
+          const parsed = typeof dayResult.value === 'string' ? JSON.parse(dayResult.value) : dayResult.value;
+          dispatch({ type: 'SET_DAY', day: { ...emptyDay(dayKey), ...parsed } });
+        } catch {
+          dispatch({ type: 'SET_DAY', day: emptyDay(dayKey) });
+        }
+      } else {
+        // Guaranteed fresh emptyDay with ₹0 reconciliation for new date
+        dispatch({ type: 'SET_DAY', day: emptyDay(dayKey) });
       }
       // Fetch latest customers
       const custResult = await storage.get('customers');
       if (custResult?.value) {
-        const list = JSON.parse(custResult.value);
+        const list = typeof custResult.value === 'string' ? JSON.parse(custResult.value) : custResult.value;
         dispatch({ type: 'SET_CUSTOMERS', customers: list });
         try { localStorage.setItem('sarita_customers', JSON.stringify(list)); } catch {}
       }
       // Fetch latest history
       const histResult = await storage.get('history');
       if (histResult?.value) {
-        dispatch({ type: 'SET_HISTORY', history: JSON.parse(histResult.value) });
+        const hList = typeof histResult.value === 'string' ? JSON.parse(histResult.value) : histResult.value;
+        dispatch({ type: 'SET_HISTORY', history: hList });
       }
       updateSync();
       flushPending(updateSync, toast);
